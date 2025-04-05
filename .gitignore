@@ -1,0 +1,9 @@
+echo "__pycache__/" > .gitignore
+echo "*.pyc" >> .gitignore
+echo ".env" >> .gitignore
+echo "*.joblib" >> .gitignore  # Exclude rf_model.joblib
+echo "*.csv" >> .gitignore    # Exclude updated_india_agri_data.csv
+echo "venv/" >> .gitignore
+echo ".idx/" >> .gitignore
+echo ".vscode/" >> .gitignore
+echo "*.log" >> .gitignore
