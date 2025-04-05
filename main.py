@@ -10,6 +10,29 @@ import os
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
 
+def download_file(url, filename):
+    if not os.path.exists(filename):
+        print(f"Downloading {filename}...")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        with open(filename, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print(f"{filename} downloaded successfully!")
+    else:
+        print(f"{filename} already exists, skipping download.")
+
+# Replace with your Google Drive download links
+model_url = "https://drive.usercontent.google.com/download?id=1U4oAg2IkLawqgSvzI3ge5imNZMKtQNKT&export=download&authuser=0"
+data_url = "https://drive.google.com/uc?export=download&id=1rE-1oQT_UN2zTnnrf8IH4WIWDo99edp_"
+
+download_file(model_url, "rf_model.joblib")
+download_file(data_url, "updated_india_agri_data.csv")
+
+# Load the model and data
+model = joblib.load("rf_model.joblib")
+data = pd.read_csv("updated_india_agri_data.csv")
+
 # Initialize FastAPI app
 app = FastAPI()
 
