@@ -1,0 +1,22 @@
+[build]
+  # Command to install dependencies and start the FastAPI app
+  command = "pip install -r requirements.txt && python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+  # Directory to publish (leave blank for functions-based deployment)
+  publish = ""
+  # Environment settings (e.g., Python version)
+  environment = { PYTHON_VERSION = "3.11" } # Match the Python version in Project IDX (e.g., 3.11)
+
+[dev]
+  # Development server command (optional, for local testing in Netlify Dev)
+  command = "uvicorn main:app --reload --host 0.0.0.0 --port 8888"
+  port = 8888
+  targetPort = 8888
+
+[functions]
+  # Directory for custom Netlify Functions (if you have any)
+  directory = "netlify/functions/" # Uncomment and adjust if you use functions
+
+[context.production.environment]
+  # Environment variables for production (e.g., API keys)
+  GEMINI_API_KEY = "AIzaSyB3x4u31dwLrgTNMLNeb9LWNAJiurinzfA"
+  OPENWEATHER_API_KEY = "4761e19fa1d5f0e73042f23050507d45"
