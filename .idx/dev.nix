@@ -4,7 +4,7 @@
 
   # Use https://search.nixos.org/packages to find packages
   packages = with pkgs; [
-    python312              # Base Python 3.12
+    python312             # Base Python 3.12
     python312Packages.pip  # For installing additional Python packages
     python312Packages.fastapi  # For the FastAPI framework
     python312Packages.uvicorn  # ASGI server for FastAPI
@@ -66,3 +66,4 @@
     };
   };
 }
+
