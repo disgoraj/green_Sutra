@@ -2,7 +2,6 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 import pandas as pd
-import joblib
 import google.generativeai as genai
 import requests
 from dotenv import load_dotenv
@@ -10,54 +9,18 @@ import os
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
 
-def download_file(url, filename):
-    if not os.path.exists(filename):
-        print(f"Downloading {filename}...")
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        with open(filename, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        print(f"{filename} downloaded successfully!")
-    else:
-        print(f"{filename} already exists, skipping download.")
-
-# Replace with your Google Drive download links
-model_url = "https://drive.usercontent.google.com/download?id=1U4oAg2IkLawqgSvzI3ge5imNZMKtQNKT&export=download&authuser=0"
-data_url = "https://drive.google.com/uc?export=download&id=1rE-1oQT_UN2zTnnrf8IH4WIWDo99edp_"
-
 # Initialize FastAPI app
 app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
-    download_file(model_url, "rf_model.joblib")
-    download_file(data_url, "updated_india_agri_data.csv")
-
-    global rf_model, label_encoders, df
-
-    # Load Random Forest model
-    try:
-        rf_model = joblib.load('rf_model.joblib')
-        print("Random Forest model loaded successfully")
-    except Exception as e:
-        print(f"Error loading rf_model.joblib: {str(e)}")
-        raise RuntimeError(f"Failed to load rf_model.joblib: {str(e)}")
-
-    # Load label encoders
-    try:
-        label_encoders = joblib.load('label_encoders.joblib')
-        print("Label encoders loaded successfully")
-    except Exception as e:
-        print(f"Error loading label_encoders.joblib: {str(e)}")
-        raise RuntimeError(f"Failed to load label_encoders.joblib: {str(e)}")
-
-    # Load dataset
+    global df
+    # Load dataset (assume it's already present locally)
     try:
         df = pd.read_csv('updated_india_agri_data.csv')
         print("Dataset loaded successfully")
     except FileNotFoundError as e:
         print(f"Error loading dataset: {str(e)}")
-        raise FileNotFoundError("updated_india_agri_data.csv not found in the current directory")
+        raise FileNotFoundError("updated_india_agri_data.csv not found in the current directory. Please upload it manually.")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -79,29 +42,6 @@ except Exception as e:
     print(f"Error configuring Gemini API: {str(e)}")
     raise RuntimeError(f"Failed to configure Gemini API: {str(e)}")
 
-# Load the Random Forest model and label encoders with error handling
-try:
-    rf_model = joblib.load('rf_model.joblib')
-    print("Random Forest model loaded successfully")
-except Exception as e:
-    print(f"Error loading rf_model.joblib: {str(e)}")
-    raise RuntimeError(f"Failed to load rf_model.joblib: {str(e)}")
-
-try:
-    label_encoders = joblib.load('label_encoders.joblib')
-    print("Label encoders loaded successfully")
-except Exception as e:
-    print(f"Error loading label_encoders.joblib: {str(e)}")
-    raise RuntimeError(f"Failed to load label_encoders.joblib: {str(e)}")
-
-# Load dataset for fallback data
-try:
-    df = pd.read_csv('updated_india_agri_data.csv')
-    print("Dataset loaded successfully")
-except FileNotFoundError as e:
-    print(f"Error loading dataset: {str(e)}")
-    raise FileNotFoundError("updated_india_agri_data.csv not found in the current directory")
-
 # Emoji mapping for output
 emoji_map = {
     "Next Crop": "🌾",
@@ -117,7 +57,7 @@ emoji_map = {
 
 # Mapping of states to major cities for weather API
 STATE_TO_CITY = {
-   "Andaman and Nicobar Islands": "Port Blair",
+    "Andaman and Nicobar Islands": "Port Blair",
     "Andhra Pradesh": "Amaravati",
     "Arunachal Pradesh": "Itanagar",
     "Assam": "Dispur",
@@ -176,25 +116,29 @@ def fetch_weather(location: str) -> dict:
         print(f"Error fetching weather for {city}: {str(e)}")
         return {"temperature": 25, "rainfall": 2}
 
-# Function to predict crop using Random Forest
-def predict_crop(user_input: dict) -> str:
+# Function to recommend crop based on CSV lookup
+def recommend_crop(user_input: dict) -> tuple[str, float]:
     try:
-        rf_input = pd.DataFrame([user_input])
-        for col in rf_input.columns:
-            if col in label_encoders and rf_input[col].dtype == 'object':
-                if user_input[col] in label_encoders[col].classes_:
-                    rf_input[col] = label_encoders[col].transform([user_input[col]])[0]
-                else:
-                    rf_input[col] = label_encoders[col].transform([label_encoders[col].classes_[0]])[0]
-        prediction = rf_model.predict(rf_input)[0]
-        probabilities = rf_model.predict_proba(rf_input)[0]
-        max_prob = max(probabilities) * 100
-        predicted_crop = label_encoders['Recommend Crop'].inverse_transform([prediction])[0]
-        print(f"Predicted crop: {predicted_crop}, Confidence: {max_prob}%")
-        return predicted_crop, max_prob
+        # Simple lookup based on state and soil type (example logic)
+        matching_rows = df[
+            (df['State'] == user_input['State']) & 
+            (df['Soil Type'] == user_input['Soil Type'])
+        ]
+        if not matching_rows.empty:
+            row = matching_rows.iloc[0]
+            predicted_crop = row['Recommend Crop']
+            # Dummy confidence (since no model)
+            max_prob = 85.0  # Placeholder confidence
+            print(f"Recommended crop: {predicted_crop}, Confidence: {max_prob}%")
+            return predicted_crop, max_prob
+        else:
+            # Fallback to a default crop
+            default_crop = df['Recommend Crop'].iloc[0]
+            print(f"No match found, defaulting to: {default_crop}")
+            return default_crop, 75.0
     except Exception as e:
-        print(f"Error in predict_crop: {str(e)}")
-        raise
+        print(f"Error in recommend_crop: {str(e)}")
+        return "Unknown", 50.0
 
 # Route to handle favicon request (fixes 404 error)
 @app.get("/favicon.ico")
@@ -228,7 +172,7 @@ async def get_advice(
         temperature = weather_data["temperature"]
         rainfall = weather_data["rainfall"]
 
-        # Prepare user input for Random Forest
+        # Prepare user input for recommendation
         user_input = {
             'State': state,
             'Soil Type': soil_type,
@@ -241,8 +185,8 @@ async def get_advice(
             'Rainfall': rainfall
         }
 
-        # Predict crop using Random Forest
-        predicted_crop, max_prob = predict_crop(user_input)
+        # Recommend crop based on CSV lookup
+        predicted_crop, max_prob = recommend_crop(user_input)
 
         # Prepare prompt for Gemini API
         prompt = (
@@ -256,7 +200,7 @@ async def get_advice(
             f"Resources: {user_input['Resources']}\n"
             f"Temperature: {temperature}°C\n"
             f"Rainfall: {rainfall} mm\n"
-            f"Predicted Crop: {predicted_crop}\n"
+            f"Recommended Crop: {predicted_crop}\n"
             f"Model Confidence: {max_prob:.1f}%\n"
             "Provide a detailed recommendation in this format:\n"
             "Recommended Crop: [crop name]\n"
@@ -292,7 +236,6 @@ async def get_advice(
                     if "model confidence" in line.lower() or "%" in line:
                         continue
                     cleaned_suggestion = line.strip().lstrip('*-').strip()
-                    # Replace **text** with HTML span tags
                     import re
                     cleaned_suggestion = re.sub(r'\*\*(.*?)\*\*', r'<span class="bold-green">\1</span>', cleaned_suggestion)
                     suggestions.append(cleaned_suggestion)
@@ -314,7 +257,8 @@ async def get_advice(
                     result['Limited Resources Tip'] = value
                 elif key == 'Disease Prevention Tip':
                     result['Disease Prevention Tip'] = value
-    # Log the processed suggestions
+
+        # Log the processed suggestions
         print(f"Processed suggestions:\n{suggestions}")
         # Fill in missing fields from dataset
         if not all(key in result for key in ['Recommend Crop', 'Required Water', 'Required Fertilizer', 'Crop Protection Tip', 'Limited Resources Tip', 'Disease Prevention Tip']):
@@ -332,7 +276,6 @@ async def get_advice(
             {"emoji": emoji_map["Protect Crops"], "label": "Protect Crops", "value": result['Crop Protection Tip']},
             {"emoji": emoji_map["Limited Resources"], "label": "Limited Resources", "value": result['Limited Resources Tip']},
             {"emoji": emoji_map["Disease Prevention Tip"], "label": "Disease Prevention Tip", "value": result['Disease Prevention Tip']},
-            
         ]
 
         # Render the result page
