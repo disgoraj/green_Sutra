@@ -26,6 +26,8 @@ def download_file(url, filename):
 model_url = "https://drive.usercontent.google.com/download?id=1U4oAg2IkLawqgSvzI3ge5imNZMKtQNKT&export=download&authuser=0"
 data_url = "https://drive.google.com/uc?export=download&id=1rE-1oQT_UN2zTnnrf8IH4WIWDo99edp_"
 
+# Initialize FastAPI app
+app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     download_file(model_url, "rf_model.joblib")
@@ -33,10 +35,6 @@ async def startup_event():
     global model, data
     model = joblib.load("rf_model.joblib")
     data = pd.read_csv("updated_india_agri_data.csv")
-
-# Initialize FastAPI app
-app = FastAPI()
-
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
