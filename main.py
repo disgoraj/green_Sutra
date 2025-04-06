@@ -32,9 +32,33 @@ app = FastAPI()
 async def startup_event():
     download_file(model_url, "rf_model.joblib")
     download_file(data_url, "updated_india_agri_data.csv")
-    global model, data
-    model = joblib.load("rf_model.joblib")
-    data = pd.read_csv("updated_india_agri_data.csv")
+
+    global rf_model, label_encoders, df
+
+    # Load Random Forest model
+    try:
+        rf_model = joblib.load('rf_model.joblib')
+        print("Random Forest model loaded successfully")
+    except Exception as e:
+        print(f"Error loading rf_model.joblib: {str(e)}")
+        raise RuntimeError(f"Failed to load rf_model.joblib: {str(e)}")
+
+    # Load label encoders
+    try:
+        label_encoders = joblib.load('label_encoders.joblib')
+        print("Label encoders loaded successfully")
+    except Exception as e:
+        print(f"Error loading label_encoders.joblib: {str(e)}")
+        raise RuntimeError(f"Failed to load label_encoders.joblib: {str(e)}")
+
+    # Load dataset
+    try:
+        df = pd.read_csv('updated_india_agri_data.csv')
+        print("Dataset loaded successfully")
+    except FileNotFoundError as e:
+        print(f"Error loading dataset: {str(e)}")
+        raise FileNotFoundError("updated_india_agri_data.csv not found in the current directory")
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
