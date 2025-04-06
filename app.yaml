@@ -4,10 +4,7 @@ entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app
 
 instance_class: F1
 
-
-
-
 env_variables:
   GEMINI_API_KEY: "AIzaSyB3x4u31dwLrgTNMLNeb9LWNAJiurinzfA"  # Replace with your key
-  OPENWEATHER_API_KEY: "4761e19fa1d5f0e73042f23050507d45"  # Replace with your key
-    PORT: 8080
+  OPENWEATHER_API_KEY: "4761e19fa1d5f0e73042f23050507d45"    # Replace with your key
+  PORT: 8080
