@@ -1,0 +1,5 @@
+runtime: python312
+entrypoint: gunicorn -b :$PORT main:app
+env_variables:
+  GEMINI_API_KEY: "AIzaSyB3x4u31dwLrgTNMLNeb9LWNAJiurinzfA"  # Replace with your key
+  OPENWEATHER_API_KEY: "4761e19fa1d5f0e73042f23050507d45"  # Replace with your key
